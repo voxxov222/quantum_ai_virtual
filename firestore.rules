@@ -1,0 +1,47 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Basic type validation helpers
+    function isString(val, maxLen) {
+      return val is string && val.size() <= maxLen;
+    }
+    
+    function isValidPrediction(data) {
+      return data.keys().hasAll(['timestamp', 'strategyId', 'numbers']) &&
+             data.timestamp is string &&
+             data.strategyId is string &&
+             data.numbers is list &&
+             data.numbers.size() == 6 &&
+             data.numbers[0] is number;
+    }
+    
+    function isValidWinning(data) {
+      return data.keys().hasAll(['username', 'date', 'numbers']) &&
+             data.username is string &&
+             data.date is string &&
+             data.numbers is list;
+    }
+
+    match /predictions/{document=**} {
+      allow read: if true;
+      allow create: if isValidPrediction(request.resource.data);
+      allow update: if isValidPrediction(request.resource.data);
+      allow delete: if false; // Only allow creation
+    }
+
+    match /community_winnings/{document=**} {
+      allow read: if true;
+      allow create: if isValidWinning(request.resource.data);
+      allow update: if isValidWinning(request.resource.data);
+      allow delete: if false;
+    }
+    
+    match /forum_posts/{document=**} {
+      allow read, write: if true;
+    }
+
+    match /profiles/{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

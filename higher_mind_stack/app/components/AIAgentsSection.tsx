@@ -1,0 +1,681 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Play, Square, Network, Database, Plus, Search, GitMerge, Cpu, Trash2, ArrowRight, Brain, Zap, Settings2, Activity, X, ScrollText, BookmarkPlus, Archive } from 'lucide-react';
+import { CosmicData } from '../types';
+import { swarmEngine, Agent, AgentRole } from '../utils/swarmEngine';
+import { getSwarmFindings, saveSwarmFinding, updateSwarmFinding, deleteSwarmFinding, SwarmFinding } from '../services/swarmService';
+import { auth } from '../firebase';
+import { ProjectableWidget } from './ProjectableWidget';
+
+interface AIAgentsSectionProps {
+  cosmicData: CosmicData;
+}
+
+export const AIAgentsSection: React.FC<AIAgentsSectionProps> = ({ cosmicData }) => {
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [isSwarmRunning, setIsSwarmRunning] = useState(false);
+  const [globalLog, setGlobalLog] = useState<{time: string, msg: string}[]>([]);
+  const [selectedAgentIds, setSelectedAgentIds] = useState<string[]>([]);
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [uptime, setUptime] = useState(0);
+  const [viewMode, setViewMode] = useState<'network' | 'outputs' | 'database'>('network');
+
+  // Sync with global swarm engine
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isSwarmRunning) {
+        interval = setInterval(() => setUptime(prev => prev + 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isSwarmRunning]);
+
+  const formatUptime = (seconds: number) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
+
+  const selectAllAgents = () => {
+      setSelectedAgentIds(agents.map(a => a.id));
+  };
+
+  const deleteSelectedAgents = () => {
+      if (window.confirm(`Delete ${selectedAgentIds.length} selected agents?`)) {
+          selectedAgentIds.forEach(id => swarmEngine.deleteAgent(id));
+          setSelectedAgentIds([]);
+          if (selectedAgentIds.includes(selectedAgentId || '')) {
+              setSelectedAgentId(null);
+          }
+      }
+  };
+
+  const getRoleColor = (role: string) => {
+      switch (role) {
+          case 'research': return 'text-blue-400 border-blue-400 bg-blue-500/20 shadow-[0_0_20px_rgba(59,130,246,0.5)] ring-blue-400';
+          case 'tasks': return 'text-amber-400 border-amber-400 bg-amber-500/20 shadow-[0_0_20px_rgba(245,158,11,0.5)] ring-amber-400';
+          case 'connections': return 'text-purple-400 border-purple-400 bg-purple-500/20 shadow-[0_0_20px_rgba(168,85,247,0.5)] ring-purple-400';
+          case 'mapping': return 'text-emerald-400 border-emerald-400 bg-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.5)] ring-emerald-400';
+          case 'autonomous': return 'text-rose-400 border-rose-400 bg-rose-500/20 shadow-[0_0_20px_rgba(244,63,94,0.5)] ring-rose-400';
+          default: return 'text-teal-400 border-teal-400 bg-teal-500/20 shadow-[0_0_20px_rgba(45,212,191,0.5)] ring-teal-400';
+      }
+  };
+  const [filter, setFilter] = useState<{category: string | 'All', agentId: string | 'All'}>({category: 'All', agentId: 'All'});
+  const [selectedFinding, setSelectedFinding] = useState<any | null>(null);
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [selectedVoice, setSelectedVoice] = useState<string>('');
+
+  useEffect(() => {
+     if (typeof window !== 'undefined' && window.speechSynthesis) {
+        const loadVoices = () => {
+           const availableVoices = window.speechSynthesis.getVoices();
+           setVoices(availableVoices);
+           if (availableVoices.length > 0 && !selectedVoice) {
+              setSelectedVoice(availableVoices[0].name);
+           }
+        };
+        loadVoices();
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+     }
+  }, []);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Sync with global swarm engine
+  const [firestoreFindings, setFirestoreFindings] = useState<SwarmFinding[]>([]);
+
+  useEffect(() => {
+     if (auth.currentUser) {
+        getSwarmFindings(auth.currentUser.uid).then(res => {
+           setFirestoreFindings(res);
+        }).catch(e => {
+           console.error("Error fetching swarm findings", e);
+        });
+     }
+  }, []);
+
+  useEffect(() => {
+    swarmEngine.setCosmicData(cosmicData);
+    
+    // Initial sync
+    setAgents([...swarmEngine.agents]);
+    setIsSwarmRunning(swarmEngine.isRunning);
+    setGlobalLog([...swarmEngine.logs]);
+    
+    let lastFindingsCount = swarmEngine.findingsDatabase.length;
+
+    // Create local state for findings to trigger re-renders
+    const unsubscribe = swarmEngine.subscribe(() => {
+      setAgents([...swarmEngine.agents]);
+      setIsSwarmRunning(swarmEngine.isRunning);
+      setGlobalLog([...swarmEngine.logs]);
+
+      if (auth.currentUser && swarmEngine.findingsDatabase.length > lastFindingsCount) {
+         const newFinding = swarmEngine.findingsDatabase[0];
+         if (newFinding) {
+            saveSwarmFinding(auth.currentUser.uid, {
+               agentId: newFinding.agentId,
+               agentName: newFinding.agentName,
+               category: newFinding.category,
+               content: newFinding.content,
+               links: newFinding.links || [],
+               references: newFinding.references || []
+            }).then(() => {
+               getSwarmFindings(auth.currentUser!.uid).then(setFirestoreFindings);
+            });
+         }
+      }
+      lastFindingsCount = swarmEngine.findingsDatabase.length;
+    });
+    return unsubscribe;
+  }, [cosmicData]);
+
+  const allFindings = [...firestoreFindings];
+  
+  // Also include memory findings if not logged in
+  if (!auth.currentUser) {
+     allFindings.push(...swarmEngine.findingsDatabase as any);
+  }
+
+  const filteredFindings = allFindings.filter(f => 
+    !f.archived &&
+    (filter.category === 'All' || f.category === filter.category) &&
+    (filter.agentId === 'All' || f.agentId === filter.agentId)
+  );
+  
+  const categories = Array.from(new Set(allFindings.map(f => f.category)));
+
+  const addAgent = () => {
+    const newId = swarmEngine.addAgent();
+    if (newId) setSelectedAgentId(newId);
+  };
+
+  const selectedAgent = agents.find(a => a.id === selectedAgentId);
+
+  // Dragging logic for visualizer
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const handleDragStart = (id: string) => setDraggingId(id);
+  const handleDrag = (e: React.MouseEvent) => {
+    if (draggingId && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left - 20;
+      const y = e.clientY - rect.top - 20;
+      swarmEngine.updateAgent(draggingId, { x, y });
+    }
+  };
+  const handleDragEnd = () => setDraggingId(null);
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full flex flex-col xl:flex-row gap-6 p-4">
+      {/* Workflow Visualizer & Outputs Pane */}
+      <div 
+        className="flex-1 bg-stone-950 border border-white/10 rounded-2xl relative overflow-hidden flex flex-col shadow-2xl"
+        onMouseMove={handleDrag}
+        onMouseUp={handleDragEnd}
+        onMouseLeave={handleDragEnd}
+      >
+        <div className="p-4 border-b border-white/5 flex flex-wrap gap-4 justify-between items-center bg-stone-900/50 backdrop-blur z-10">
+          <div>
+            <h2 className="text-white font-mono uppercase tracking-widest flex items-center gap-2">
+              <Network className="w-5 h-5 text-teal-400" />
+              Swarm Intelligence Network
+            </h2>
+            <p className="text-stone-500 text-xs mt-1">Interactive background agent node map. Persistent Memory active.</p>
+          </div>
+          <div className="flex gap-4">
+             <div className="flex bg-stone-900 border border-white/5 rounded-lg p-1">
+               <button onClick={() => setViewMode('network')} className={`px-4 py-1.5 rounded-md text-xs font-mono transition-colors flex items-center gap-2 ${viewMode === 'network' ? 'bg-teal-500/10 text-teal-400' : 'text-stone-500 hover:text-stone-300'}`}><Network className="w-3 h-3" /> Map View</button>
+               <button onClick={() => setViewMode('outputs')} className={`px-4 py-1.5 rounded-md text-xs font-mono transition-colors flex items-center gap-2 ${viewMode === 'outputs' ? 'bg-purple-500/10 text-purple-400' : 'text-stone-500 hover:text-stone-300'}`}><ScrollText className="w-3 h-3" /> Agent Outputs</button>
+               <button onClick={() => setViewMode('database')} className={`px-4 py-1.5 rounded-md text-xs font-mono transition-colors flex items-center gap-2 ${viewMode === 'database' ? 'bg-amber-500/10 text-amber-400' : 'text-stone-500 hover:text-stone-300'}`}><Database className="w-3 h-3" /> Database</button>
+             </div>
+             <button onClick={addAgent} className="px-3 py-1.5 bg-stone-800 hover:bg-stone-700 text-stone-300 rounded-lg border border-white/10 flex items-center gap-2 text-xs transition-colors">
+               <Plus className="w-4 h-4" /> Add Agent
+             </button>
+             <div className="flex bg-stone-900 border border-white/5 rounded-lg p-1 gap-1">
+               <button 
+                 onClick={selectAllAgents}
+                 className="px-3 py-1.5 hover:bg-stone-800 text-stone-400 hover:text-white rounded-md text-xs font-mono transition-colors"
+                 title="Select All Agents"
+               >
+                 Select All
+               </button>
+               {selectedAgentIds.length > 0 && (
+                 <button 
+                   onClick={deleteSelectedAgents}
+                   className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-md border border-rose-500/30 flex items-center gap-2 text-xs transition-colors"
+                 >
+                   <Trash2 className="w-3 h-3" /> Delete ({selectedAgentIds.length})
+                 </button>
+               )}
+             </div>
+             <button 
+               onClick={() => swarmEngine.toggleSwarm()} 
+               className={`px-4 py-1.5 rounded-lg flex items-center gap-2 text-xs font-bold transition-all shadow-lg ${
+                 isSwarmRunning ? 'bg-rose-500/20 text-rose-400 border border-rose-500/50 hover:bg-rose-500/30' : 'bg-teal-500 text-stone-950 hover:bg-teal-400'
+               }`}
+             >
+               {isSwarmRunning ? <><Square className="w-4 h-4" /> Halt Swarm</> : <><Play className="w-4 h-4" /> Run Autonomous Swarm</>}
+             </button>
+             <div className="px-3 py-1.5 bg-stone-900 border border-white/5 rounded-lg text-xs font-mono text-stone-400 flex items-center gap-2">
+                <Activity className="w-4 h-4" /> Uptime: {formatUptime(uptime)}
+             </div>
+             <button 
+               onClick={() => {
+                 if (window.confirm("ARE YOU CERTAIN? THIS WILL ERASE THE CURRENT AGENT MATRIX AND NEURAL LINKS.")) {
+                   swarmEngine.clearAll();
+                   setSelectedAgentId(null);
+                   setSelectedAgentIds([]);
+                 }
+               }} 
+               className="px-3 py-1.5 bg-stone-900 hover:bg-stone-800 text-stone-400 rounded-lg border border-white/5 flex items-center gap-2 text-xs transition-colors"
+               title="Decommission all agents and clear memory"
+             >
+               <Trash2 className="w-4 h-4" /> Clear Matrix
+             </button>
+             <button
+               onClick={() => {
+                 const identityStr = `${cosmicData.first_name || 'User'} (${cosmicData.birth_date} ${cosmicData.birth_time})`;
+                 swarmEngine.startTargetedResearch(`Public records and ancestral traces for ${cosmicData.first_name || 'the user'}`, identityStr);
+               }}
+               className="px-4 py-1.5 bg-indigo-500/10 border border-indigo-500/40 text-indigo-400 hover:bg-indigo-500/20 rounded-lg flex items-center gap-2 text-xs font-bold transition-all"
+               title="Investigate public databases and records for this identity"
+             >
+               <Search className="w-4 h-4" /> Deep Public Search
+             </button>
+          </div>
+        </div>
+
+        {viewMode === 'network' ? (
+          /* Node Map Area */
+          <div className="flex-1 relative overflow-hidden" ref={containerRef}>
+            {/* Grid Background */}
+            <div className="absolute inset-0 border-[0.5px] border-white/5 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]" />
+            
+            {/* Connection Lines (SVG) */}
+            <svg className="absolute inset-0 pointer-events-none w-full h-full">
+              {agents.map(agent => (
+                <g key={`lines-${agent.id}`}>
+                  {/* Workflow Connections */}
+                  {agent.targetAgents.map(targetId => {
+                    const target = agents.find(a => a.id === targetId);
+                    if (!target) return null;
+                    const path = `M ${agent.x + 20} ${agent.y + 20} Q ${(agent.x + target.x) / 2} ${(agent.y + target.y) / 2 + 50} ${target.x + 20} ${target.y + 20}`;
+                    return (
+                      <g key={`conn-${agent.id}-${targetId}`}>
+                        <path
+                          d={path}
+                          fill="none"
+                          stroke={isSwarmRunning ? "rgba(45, 212, 191, 0.4)" : "rgba(255,255,255,0.1)"}
+                          strokeWidth="2"
+                        />
+                        {isSwarmRunning && (
+                          <path
+                            d={path}
+                            fill="none"
+                            stroke="rgba(45, 212, 191, 0.8)"
+                            strokeWidth="2"
+                            strokeDasharray="4 8"
+                            className="animate-[dash_1s_linear_infinite]"
+                          />
+                        )}
+                      </g>
+                    );
+                  })}
+                  {/* Memory Connections */}
+                  {agent.memory.slice(0, 30).map((_, i) => {
+                    const angle = (i * 137.5) * (Math.PI / 180); // Fibonacci spiral angle
+                    const radius = 35 + (i * 2); 
+                    const mx = agent.x + 20 + Math.cos(angle) * radius;
+                    const my = agent.y + 20 + Math.sin(angle) * radius;
+                    return (
+                      <line 
+                        key={`mem-line-${agent.id}-${i}`}
+                        x1={agent.x + 20} y1={agent.y + 20} x2={mx} y2={my}
+                        stroke="rgba(45, 212, 191, 0.2)" strokeWidth="1"
+                      />
+                    );
+                  })}
+                </g>
+              ))}
+            </svg>
+
+            {/* Agent Nodes & Memory Nodes */}
+            {agents.map((agent) => (
+              <React.Fragment key={`agent-group-${agent.id}`}>
+                {/* Memory Data Nodes */}
+                {agent.memory.slice(0, 30).map((_, i) => {
+                  const angle = (i * 137.5) * (Math.PI / 180);
+                  const radius = 35 + (i * 2);
+                  const mx = agent.x + 20 + Math.cos(angle) * radius;
+                  const my = agent.y + 20 + Math.sin(angle) * radius;
+                  return (
+                    <div 
+                      key={`mem-node-${agent.id}-${i}`}
+                      className="absolute w-1.5 h-1.5 rounded-full bg-teal-400/60 border-[0.5px] border-teal-300 shadow-[0_0_8px_rgba(45,212,191,0.8)] pointer-events-none transition-all duration-300 ease-out"
+                      style={{ 
+                        left: mx - 3, 
+                        top: my - 3, 
+                        animation: `memoryPulse 2s infinite ${i * 0.1}s` 
+                      }}
+                    />
+                  );
+                })}
+                
+                {/* Main Agent Avatar */}
+                  <ProjectableWidget id={`agent-${agent.id}`} type="ai_agent" componentName="AIAgent" data={agent}>
+                    <div
+                      onMouseDown={(e) => { e.stopPropagation(); handleDragStart(agent.id); }}
+                      onClick={(e) => {
+                          e.stopPropagation();
+                          if (e.metaKey || e.shiftKey || e.ctrlKey) {
+                              setSelectedAgentIds(prev => prev.includes(agent.id) ? prev.filter(x => x !== agent.id) : [...prev, agent.id]);
+                          } else {
+                              setSelectedAgentId(agent.id);
+                              setSelectedAgentIds([agent.id]);
+                          }
+                      }}
+                      className={`absolute w-10 h-10 rounded-full flex items-center justify-center cursor-pointer transform -translate-x-1/2 -translate-y-1/2 transition-shadow ${
+                        selectedAgentId === agent.id || selectedAgentIds.includes(agent.id) ? 'ring-2 z-20 ' + getRoleColor(agent.role) : 'hover:ring-2 hover:ring-white/20 z-10 ' + (agent.status === 'running' ? getRoleColor(agent.role).replace('shadow', '') : 'bg-stone-800 border-white/20 text-stone-400')
+                      } border-2 backdrop-blur-md`}
+                      style={{ left: agent.x + 20, top: agent.y + 20 }}
+                    >
+                      <Cpu className={`w-5 h-5 ${agent.status === 'running' ? 'animate-pulse' : ''}`} />
+                      
+                      {/* Agent Label */}
+                      <div className="absolute top-12 whitespace-nowrap bg-stone-900/80 px-2 py-1 rounded text-[10px] text-stone-300 font-mono border border-white/10 pointer-events-none">
+                        {agent.name} <span className="text-teal-400">[Lvl {agent.level}]</span>
+                      </div>
+                    </div>
+                  </ProjectableWidget>
+              </React.Fragment>
+            ))}
+            
+            <style dangerouslySetInnerHTML={{__html: `
+              @keyframes dash {
+                to {
+                  stroke-dashoffset: -12;
+                }
+              }
+              @keyframes memoryPulse {
+                0%, 100% { opacity: 0.8; transform: scale(1); }
+                50% { opacity: 0.3; transform: scale(0.8); }
+              }
+            `}} />
+          </div>
+        ) : viewMode === 'outputs' ? (
+          /* Consolidated Outputs View */
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+               {agents.map(agent => (
+                 <div key={`output-${agent.id}`} className="bg-stone-900/60 border border-white/5 rounded-xl p-4 flex flex-col gap-3">
+                    <div className="flex items-center gap-2 pb-2 border-b border-white/5">
+                      <Cpu className={`w-4 h-4 ${agent.status === 'running' ? 'text-teal-400 animate-pulse' : 'text-stone-500'}`} />
+                      <h3 className="text-sm font-mono text-stone-200">{agent.name}</h3>
+                      <span className="ml-auto text-[10px] text-stone-500 uppercase">{agent.role}</span>
+                    </div>
+                    <div className="flex-1 space-y-2">
+                       {agent.findings.length === 0 ? (
+                          <div className="text-xs text-stone-600 font-mono italic p-2 bg-black/20 rounded">Waiting for data...</div>
+                       ) : (
+                          agent.findings.slice(0, 5).map((f, i) => (
+                             <div key={i} className="text-[10px] sm:text-xs text-teal-100/70 font-mono leading-relaxed bg-black/40 p-2 rounded border border-white/5">
+                               &gt; {f}
+                             </div>
+                          ))
+                       )}
+                    </div>
+                 </div>
+               ))}
+             </div>
+             
+             {/* Global Log Stream */}
+             <div className="mt-8 pt-6 border-t border-white/10">
+                <h3 className="text-sm font-mono text-stone-400 flex items-center gap-2 mb-4">
+                   <Activity className="w-4 h-4"/> Global Swarm Log Stream
+                </h3>
+                <div className="bg-black/60 rounded-xl p-4 h-64 overflow-y-auto border border-stone-800 space-y-1">
+                   {globalLog.map((log, i) => (
+                     <div key={i} className="text-[10px] sm:text-xs font-mono">
+                        <span className="text-stone-600">[{log.time}]</span> <span className="text-stone-300">{log.msg}</span>
+                     </div>
+                   ))}
+                   {globalLog.length === 0 && <span className="text-stone-600 italic text-xs">No logs recorded. Initialize swarm.</span>}
+                </div>
+             </div>
+          </div>
+        ) : (
+          /* Database View */
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+             <div className="flex gap-4 items-center bg-stone-900/50 p-4 rounded-xl border border-white/5">
+                <Search className="w-4 h-4 text-amber-400"/>
+                <select className="bg-stone-950 text-xs text-stone-300 border border-white/10 rounded p-1" onChange={(e) => setFilter({...filter, category: e.target.value})}>
+                   <option value="All">All Categories</option>
+                   {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <select className="bg-stone-950 text-xs text-stone-300 border border-white/10 rounded p-1" onChange={(e) => setFilter({...filter, agentId: e.target.value})}>
+                   <option value="All">All Agents</option>
+                   {agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+                <button 
+                  onClick={() => {
+                    if (window.confirm("Wipe all locally stored intelligence findings?")) {
+                      swarmEngine.wipeDatabase();
+                    }
+                  }}
+                  className="ml-auto px-3 py-1 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded text-[10px] uppercase font-bold hover:bg-rose-500/20 transition-colors"
+                >
+                  Wipe Intel
+                </button>
+             </div>
+             <div className="grid grid-cols-1 gap-2">
+                {filteredFindings.map(f => (
+                   <div key={f.id} className="bg-stone-900/40 p-4 rounded-lg border border-white/5 flex gap-4 text-xs font-mono cursor-pointer hover:bg-stone-900/60 transition-colors" onClick={() => setSelectedFinding(f)}>
+                      <span className="text-amber-500 w-24 shrink-0">[{f.category}]</span>
+                      <span className="text-teal-400 w-32 shrink-0">{f.agentName}</span>
+                      <span className="text-stone-300 flex-1">{f.content}</span>
+                      <span className="text-stone-600 w-20 text-right">{f.timestamp}</span>
+                   </div>
+                ))}
+             </div>
+          </div>
+        )}
+      </div>
+
+      {/* Selected Agent Properties Panel */}
+      <AnimatePresence>
+        {selectedAgent && viewMode === 'network' && (
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }} 
+            animate={{ opacity: 1, x: 0 }} 
+            exit={{ opacity: 0, x: 20 }}
+            className="w-full xl:w-96 bg-stone-900/60 border border-white/10 rounded-2xl flex flex-col shadow-xl overflow-hidden"
+          >
+            <div className="p-4 border-b border-white/5 bg-black/40 flex justify-between items-start">
+              <div>
+                <input 
+                  type="text" 
+                  value={selectedAgent.name} 
+                  onChange={(e) => swarmEngine.updateAgent(selectedAgent.id, { name: e.target.value })}
+                  className="bg-transparent border-none text-teal-300 font-mono font-bold text-lg p-0 focus:ring-0 w-full mb-1"
+                />
+                <span className="text-[10px] text-stone-500 font-mono uppercase bg-white/5 px-2 py-0.5 rounded border border-white/10">
+                  Level {selectedAgent.level} Entity • {selectedAgent.status}
+                </span>
+              </div>
+              <button onClick={() => setSelectedAgentId(null)} className="text-stone-500 hover:text-white mt-1">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-6">
+              
+              {/* Role & Core Setup */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-mono text-stone-400 flex items-center gap-2 uppercase"><Settings2 className="w-3 h-3"/> Agent Configuration</h3>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <select 
+                    value={selectedAgent.role}
+                    onChange={(e) => swarmEngine.updateAgent(selectedAgent.id, { role: e.target.value as AgentRole })}
+                    className="bg-stone-950 border border-white/10 text-stone-300 text-xs rounded-lg p-2 focus:ring-teal-500"
+                  >
+                    <option value="research">Research</option>
+                    <option value="tasks">Tasks</option>
+                    <option value="connections">Find Connections</option>
+                    <option value="mapping">3D Mind Mapping</option>
+                    <option value="autonomous">Autonomous Core</option>
+                  </select>
+                  
+                  <button onClick={() => swarmEngine.upgradeAgent(selectedAgent.id)} className="bg-purple-500/10 border border-purple-500/30 text-purple-300 hover:bg-purple-500/20 text-xs rounded-lg p-2 flex items-center justify-center gap-2 transition-colors">
+                    <Zap className="w-3 h-3" /> Upgrade Agent
+                  </button>
+                </div>
+              </div>
+
+              {/* Memory & Instructions */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-mono text-stone-400 flex items-center gap-2 uppercase"><Database className="w-3 h-3"/> Instructions & Database</h3>
+                <textarea
+                  value={selectedAgent.instructions}
+                  onChange={(e) => swarmEngine.updateAgent(selectedAgent.id, { instructions: e.target.value })}
+                  placeholder="Blank text box user fills in with it's tasks instructions..."
+                  className="w-full h-32 bg-stone-950/80 border border-white/10 rounded-xl p-3 text-sm text-stone-200 placeholder-stone-600 focus:ring-teal-500 focus:border-teal-500 font-mono resize-none leading-relaxed"
+                />
+              </div>
+
+              {/* Skills/Functions */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-mono text-stone-400 flex items-center gap-2 uppercase"><Brain className="w-3 h-3"/> Agent Skills & Functions</h3>
+                <div className="flex flex-wrap gap-2">
+                  {selectedAgent.skills.map((skill, i) => (
+                    <span key={i} className="px-2 py-1 bg-teal-500/10 border border-teal-500/20 text-teal-300 text-[10px] rounded-full font-mono">
+                      {skill}
+                    </span>
+                  ))}
+                  <button 
+                    onClick={() => {
+                       const ns = prompt("Enter new skill or function:");
+                       if (ns) swarmEngine.updateAgent(selectedAgent.id, { skills: [...selectedAgent.skills, ns] });
+                    }}
+                    className="px-2 py-1 bg-stone-800 border border-white/10 text-stone-400 hover:text-white text-[10px] rounded-full font-mono flex items-center gap-1"
+                  >
+                    <Plus className="w-3 h-3"/> Add Skill
+                  </button>
+                </div>
+              </div>
+
+              {/* Outputs / Connections */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-mono text-stone-400 flex items-center gap-2 uppercase"><GitMerge className="w-3 h-3"/> Data Workflow (Outputs To)</h3>
+                <div className="flex flex-col gap-2">
+                  {agents.filter(a => a.id !== selectedAgent.id).map(a => {
+                    const isConnected = selectedAgent.targetAgents.includes(a.id);
+                    return (
+                      <div key={a.id} className="flex items-center justify-between bg-stone-950/50 p-2 rounded-lg border border-white/5">
+                        <span className="text-xs text-stone-300 font-mono">{a.name}</span>
+                        <button 
+                          onClick={() => swarmEngine.toggleConnection(selectedAgent.id, a.id)}
+                          className={`w-10 h-5 rounded-full relative transition-colors ${isConnected ? 'bg-teal-500' : 'bg-stone-700'}`}
+                        >
+                          <div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-all ${isConnected ? 'left-6' : 'left-1'}`} />
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Memory Log */}
+              {selectedAgent.memory.length > 0 && (
+                <div className="space-y-3 pt-4 border-t border-white/5">
+                  <h3 className="text-xs font-mono text-stone-400 flex items-center gap-2 uppercase"><Activity className="w-3 h-3"/> Active Memory Log</h3>
+                  <div className="bg-black/60 rounded-xl p-3 h-32 overflow-y-auto space-y-2 font-mono text-[9px] border border-stone-800">
+                    {selectedAgent.memory.map((m, i) => (
+                      <div key={`mem-${selectedAgent.id}-${i}`} className="text-teal-400/80 leading-tight border-b border-white/5 pb-2 last:border-0">
+                        {m}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="p-4 border-t border-white/5 bg-black/40">
+               <button 
+                 onClick={() => swarmEngine.deleteAgent(selectedAgent.id)}
+                 className="w-full py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-xs font-mono flex items-center justify-center gap-2 transition-colors"
+               >
+                 <Trash2 className="w-4 h-4"/> Delete Agent
+               </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Finding Detail Modal */}
+      <AnimatePresence>
+        {selectedFinding && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+               onClick={() => setSelectedFinding(null)}>
+             <motion.div 
+               initial={{ opacity: 0, scale: 0.9 }} 
+               animate={{ opacity: 1, scale: 1 }}
+               exit={{ opacity: 0, scale: 0.9 }}
+               className="bg-stone-900 border border-white/10 rounded-2xl p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto"
+               onClick={e => e.stopPropagation()}
+             >
+                <div className="flex justify-between items-start mb-4">
+                  <h2 className="text-xl font-bold text-teal-400 font-mono">[{selectedFinding.category}] {selectedFinding.agentName}</h2>
+                  <button onClick={() => {
+                     window.speechSynthesis?.cancel();
+                     setSelectedFinding(null);
+                  }}><X className="w-5 h-5 text-stone-500 hover:text-white"/></button>
+                </div>
+                
+                <p className="text-stone-300 mb-6 font-mono text-sm leading-relaxed">{selectedFinding.content}</p>
+                
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-xs font-mono text-stone-500 mb-2 uppercase">Voice Simulation</h4>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                       <select 
+                          className="bg-stone-950 border border-white/10 text-stone-300 text-xs rounded-lg p-2 focus:ring-teal-500 w-full sm:w-auto flex-1 font-mono"
+                          value={selectedVoice}
+                          onChange={(e) => setSelectedVoice(e.target.value)}
+                       >
+                          {voices.map(voice => (
+                             <option key={voice.name} value={voice.name}>{voice.name} ({voice.lang})</option>
+                          ))}
+                       </select>
+                       <button 
+                          onClick={() => {
+                             if (window.speechSynthesis) {
+                                window.speechSynthesis.cancel();
+                                const utterance = new SpeechSynthesisUtterance(selectedFinding.content);
+                                const voice = voices.find(v => v.name === selectedVoice);
+                                if (voice) utterance.voice = voice;
+                                utterance.pitch = 0.9;
+                                utterance.rate = 1.0;
+                                window.speechSynthesis.speak(utterance);
+                             }
+                          }}
+                          className="bg-teal-500/10 text-teal-400 text-xs px-4 py-2 rounded-lg border border-teal-500/30 flex items-center justify-center gap-2 hover:bg-teal-500/20 transition-colors whitespace-nowrap"
+                       >
+                          <Zap className="w-3 h-3"/> Play Summary
+                       </button>
+                    </div>
+                  </div>
+                  
+                  <div>
+                     <h4 className="text-xs font-mono text-stone-500 mb-2 uppercase">References & Links</h4>
+                     <ul className="text-xs font-mono text-stone-300 space-y-1">
+                        {selectedFinding.links?.map((link: string, i: number) => <li key={i}><a href={link} target="_blank" rel="noopener noreferrer" className="text-teal-400 hover:underline">{link}</a></li>)}
+                        {selectedFinding.references?.map((ref: string, i: number) => <li key={i} className="text-stone-500">• {ref}</li>)}
+                     </ul>
+                  </div>
+
+                  {auth.currentUser && !selectedFinding.id.startsWith("finding-") && (
+                     <div className="pt-4 border-t border-white/5 flex gap-2">
+                        <button 
+                           onClick={async () => {
+                              const newHighlight = !selectedFinding.highlighted;
+                              await updateSwarmFinding(selectedFinding.id, { highlighted: newHighlight });
+                              setFirestoreFindings(prev => prev.map(f => f.id === selectedFinding.id ? { ...f, highlighted: newHighlight } : f));
+                              setSelectedFinding({ ...selectedFinding, highlighted: newHighlight });
+                           }}
+                           className={`flex-1 py-2 rounded-lg text-xs font-mono flex items-center justify-center gap-2 transition-colors ${selectedFinding.highlighted ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-stone-800 text-stone-400 hover:text-stone-300 border border-white/5'}`}
+                        >
+                           <BookmarkPlus className="w-4 h-4"/> {selectedFinding.highlighted ? "Highlighted" : "Highlight"}
+                        </button>
+                        <button 
+                           onClick={async () => {
+                              await updateSwarmFinding(selectedFinding.id, { archived: true });
+                              setFirestoreFindings(prev => prev.filter(f => f.id !== selectedFinding.id));
+                              window.speechSynthesis?.cancel();
+                              setSelectedFinding(null);
+                           }}
+                           className="flex-1 py-2 bg-stone-800 hover:bg-stone-700 text-stone-400 border border-white/5 rounded-lg text-xs font-mono flex items-center justify-center gap-2 transition-colors"
+                        >
+                           <Archive className="w-4 h-4"/> Archive
+                        </button>
+                        <button 
+                           onClick={async () => {
+                              await deleteSwarmFinding(selectedFinding.id);
+                              setFirestoreFindings(prev => prev.filter(f => f.id !== selectedFinding.id));
+                              window.speechSynthesis?.cancel();
+                              setSelectedFinding(null);
+                           }}
+                           className="flex-1 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-xs font-mono flex items-center justify-center gap-2 transition-colors"
+                        >
+                           <Trash2 className="w-4 h-4"/> Delete
+                        </button>
+                     </div>
+                  )}
+
+                </div>
+             </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+};
+

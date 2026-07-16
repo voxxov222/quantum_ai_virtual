@@ -1,0 +1,10 @@
+{
+  "name": "Remix: Bet49",
+  "description": "Jarvis AI uses quantum algorithms and historical trends to predict winning Lotto 649 numbers through nine specialized analysis strategies.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,186 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-orbitron: "Orbitron", monospace;
+  --font-share: "Share Tech Mono", monospace;
+  --color-hud-base-cyan: #0ff;
+  --color-hud-text-cyan: #b2ffff;
+  --color-hud-cyan: #00d4ff;
+  --color-hud-violet: #8b5cf6;
+  --color-hud-gold: #fbbf24;
+  --color-hud-green: #10b981;
+  --color-hud-rose: #f43f5e;
+  --color-hud-purple: #a855f7;
+  --color-hud-emerald: #10b981;
+  --color-hud-amber: #f59e0b;
+  --color-hud-dark: #050a0f;
+  --color-hud-panel: rgba(5, 15, 25, 0.7);
+
+  --animate-spin-slow: spin 8s linear infinite;
+  --animate-hud-flicker: hud-flicker 0.15s infinite;
+  --animate-data-flow: data-flow 20s linear infinite;
+  --animate-pulse-glow: pulse-glow 2s ease-in-out infinite;
+}
+@import "@xyflow/react/dist/style.css";
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Cosmic Whiteboard Resonance Edge Flow animations */
+@keyframes flow-dash {
+  to {
+    stroke-dashoffset: -120;
+  }
+}
+
+.animate-resonance-flow {
+  animation: flow-dash 3s linear infinite;
+}
+
+@keyframes pulse-opacity {
+  0%, 100% {
+    opacity: 0.15;
+    filter: drop-shadow(0 0 1px currentColor) blur(3px);
+  }
+  50% {
+    opacity: 0.65;
+    filter: drop-shadow(0 0 6px currentColor) blur(4px);
+  }
+}
+
+.animate-resonance-pulse {
+  animation: pulse-opacity 2.5s ease-in-out infinite;
+}
+
+/* Custom Node Smooth Bobbing animation */
+@keyframes smooth-bob {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.animate-bobbing {
+  animation: smooth-bob 4s ease-in-out infinite;
+}
+
+/* Boot & HUD Animations */
+@keyframes scanline {
+    0% { top: -10%; opacity: 0; }
+    10% { opacity: 0.3; }
+    90% { opacity: 0.3; }
+    100% { top: 110%; opacity: 0; }
+}
+
+.animate-scanline {
+    animation: scanline 4s linear infinite;
+}
+
+@keyframes glitch-dissolve {
+    0% { filter: blur(0) hue-rotate(0); transform: scale(1); opacity: 1; }
+    30% { filter: blur(4px) hue-rotate(90deg); transform: scale(1.02); opacity: 0.8; }
+    70% { filter: blur(2px) hue-rotate(-90deg); transform: scale(0.98); opacity: 0.9; }
+    100% { filter: blur(0) hue-rotate(0); transform: scale(1); opacity: 1; }
+}
+
+.animate-glitch-in {
+    animation: glitch-dissolve 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+/* Futuristic HUD Aesthetics */
+
+@keyframes hud-flicker {
+  0% { opacity: 0.95; }
+  50% { opacity: 0.8; }
+  100% { opacity: 0.95; }
+}
+
+@keyframes data-flow {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 -1000px; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { filter: drop-shadow(0 0 5px var(--color-hud-base-cyan)); }
+  50% { filter: drop-shadow(0 0 15px var(--color-hud-base-cyan)); }
+}
+
+.hud-panel {
+  background: var(--color-hud-panel);
+  border: 1px solid rgba(0, 255, 255, 0.2);
+  box-shadow: inset 0 0 20px rgba(0, 255, 255, 0.05), 0 0 15px rgba(0, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  position: relative;
+  overflow: hidden;
+}
+
+.hud-panel::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(to bottom, transparent 50%, rgba(0, 255, 255, 0.02) 51%);
+  background-size: 100% 4px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.hud-scanline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(0, 255, 255, 0.5);
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.8), 0 0 20px rgba(0, 255, 255, 0.4);
+  z-index: 20;
+  pointer-events: none;
+  animation: scanline 6s linear infinite;
+}
+
+.hud-text {
+  color: var(--color-hud-text-cyan);
+  text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+}
+
+.hud-title {
+  color: var(--color-hud-base-cyan);
+  text-shadow: 0 0 8px rgba(0, 255, 255, 0.6);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.hud-data-flow {
+  background-image: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 255, 255, 0.05) 3px, rgba(0, 255, 255, 0.05) 4px);
+  background-size: 100% 1000px;
+  animation: data-flow 30s linear infinite;
+  pointer-events: none;
+}
+
+.holographic-text {
+  background: linear-gradient(180deg, #ffffff 0%, var(--color-hud-base-cyan) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 8px rgba(0, 255, 255, 0.4));
+}
