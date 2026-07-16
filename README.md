@@ -1,10 +1,12 @@
 <div align="center">
-  <img src="https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=128&h=128&auto=format&fit=crop" width="128" height="128" alt="bet49 Logo" style="border-radius: 20%;">
+  <img src="https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=128&h=128&auto=format&fit=crop" width="128" height="128" alt="Quantum AI Logo" style="border-radius: 20%;">
   
-  <h1 align="center">bet49 TACTICAL HUB <span style="color: #06b6d4">OS v5.2</span></h1>
+  <h1 align="center">Quantum Ai open source <span style="color: #06b6d4">OS v5.2</span></h1>
+  
   <p align="center">
     <strong>GEO-COORDINATED LOTTERY COGNITIVE AI PLATFORM</strong>
   </p>
+  
   <p align="center">
     Powered by the phenomenal synergy of <strong>Google Quantum Willow</strong> and swarm-based Proactive AI Agents to compute highly complex state vectors and probability heatmaps across multiple geographic matrices.
   </p>
@@ -45,14 +47,12 @@
 
 <br/>
 
-## 🌌 The Genesis: bet49 Tactical Hub
-
-The **bet49 TACTICAL HUB OS v5.2** is a highly conceptual visualization platform designed for analyzing, simulating, and generating lottery permutations. It leverages the cutting-edge concepts of global coordinate lattices, complex state vectors, and swarm-driven probabilistic artificial intelligence. By modeling datasets spatially across 49-node geometries, it attempts to visualize patterns from randomness through the simulated lens of near-future quantum computing.
+## 🌌 The Genesis: Quantum Ai open source
+The **Quantum Ai open source OS v5.2** is a highly conceptual visualization platform designed for analyzing, simulating, and generating lottery permutations. It leverages the cutting-edge concepts of global coordinate lattices, complex state vectors, and swarm-driven probabilistic artificial intelligence. By modeling datasets spatially across 49-node geometries, it attempts to visualize patterns from randomness through the simulated lens of near-future quantum computing.
 
 ---
 
 ## 💻 Google Quantum Willow Core Simulation
-
 This iteration transitions to a massively scalable **Google Quantum Willow** integration. The Virtual Quantum Machine (QVM) within the tactical hub simulates the layout of a densely intertwined superconducting lattice array. 
 
 - **105-Qubit Grid Architecture:** Emulates Google's latest Willow topological chip, expanding computational phase space compared to predecessor grids like Sycamore or Weber.
@@ -63,7 +63,6 @@ This iteration transitions to a massively scalable **Google Quantum Willow** int
 ---
 
 ## 🗺️ Global Subsystem Matrices
-
 Analyze geographic subsystems with dedicated geometric and algorithmic profiles:
 
 - 🇨🇦 **CANADA (NORTHERN MATRIX)**: 6/49 spatial matrix (56.1304° N, 106.3468° W)
@@ -74,7 +73,6 @@ Analyze geographic subsystems with dedicated geometric and algorithmic profiles:
 ---
 
 ## 🛠️ Architecture & Tech Stack
-
 Engineered for fluid, dark-mode terminal aesthetics and high-performance React visualization.
 
 - **Frontend Framework:** React 18 / TypeScript / Vite
@@ -85,13 +83,12 @@ Engineered for fluid, dark-mode terminal aesthetics and high-performance React v
 ---
 
 ## 🖥️ System Initialization
-
-To deploy the **bet49 TACTICAL HUB OS v5.2** locally:
+To deploy the **Quantum Ai open source OS v5.2** locally:
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-username/bet49-tactical-hub.git
-cd bet49-tactical-hub
+git clone https://github.com/your-username/quantum-ai-open-source.git
+cd quantum-ai-open-source
 
 # 2. Synchronize Quantum Dependencies
 npm install

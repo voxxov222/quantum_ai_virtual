@@ -138,13 +138,33 @@ export default function InteractiveOrbitalMenu({
       </div>
 
       {/* Cybernetic Floating Strategy Moons Array */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-1 gap-3 items-stretch relative min-h-[190px]">
+      <div className="flex flex-col gap-4 relative min-h-[190px]">
         
         {/* Connection node layout details */}
         <div className="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px] opacity-15 pointer-events-none" />
 
+        {/* Dropdown for selecting strategy centered */}
+        <div className="flex flex-col items-center justify-center pt-2 relative z-10">
+          <label className="text-[10px] text-cyan-500 font-mono font-bold tracking-widest uppercase mb-2">
+            Select Active Tool Set
+          </label>
+          <div className="relative w-full max-w-sm">
+            <select 
+              value={selectedStrategy}
+              onChange={(e) => onSelectStrategy(e.target.value)}
+              className="w-full appearance-none bg-slate-950 border border-cyan-500/50 rounded-xl px-4 py-3 text-sm font-mono text-cyan-300 font-bold focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 cursor-pointer shadow-[0_0_15px_rgba(6,182,212,0.15)] text-center text-center-last"
+            >
+              {activeChannelStrategies.filter(s => s.id === selectedStrategy).map((strat) => (
+                <option key={strat.id} value={strat.id} className="bg-slate-900 text-slate-300">
+                  {strat.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         <AnimatePresence mode="popLayout">
-          {activeChannelStrategies.map((strat, index) => {
+          {activeChannelStrategies.filter(s => s.id === selectedStrategy).map((strat, index) => {
             const isSelected = selectedStrategy === strat.id;
             const stats = strategyHitRate(strat.id);
             const catInfo = getStrategyCategory(strat.id);
@@ -160,7 +180,7 @@ export default function InteractiveOrbitalMenu({
               : 'bg-slate-950/40 hover:bg-slate-900/60 text-slate-300';
 
             return (
-              <motion.button
+              <motion.div
                 key={strat.id}
                 initial={{ opacity: 0, x: -16 }}
                 animate={{ 
@@ -255,14 +275,12 @@ export default function InteractiveOrbitalMenu({
                 </div>
 
                 {/* Orbit beam lock visual decorator */}
-                {isSelected && (
-                  <div className={`absolute top-0 right-0 w-[4px] h-full ${
-                    catInfo.color === 'cyan' ? 'bg-cyan-400' :
-                    catInfo.color === 'purple' ? 'bg-purple-400' :
-                    catInfo.color === 'magenta' ? 'bg-pink-400' : 'bg-amber-400'
-                  }`} />
-                )}
-              </motion.button>
+                <div className={`absolute top-0 right-0 w-[4px] h-full ${
+                  catInfo.color === 'cyan' ? 'bg-cyan-400' :
+                  catInfo.color === 'purple' ? 'bg-purple-400' :
+                  catInfo.color === 'magenta' ? 'bg-pink-400' : 'bg-amber-400'
+                }`} />
+              </motion.div>
             );
           })}
         </AnimatePresence>
