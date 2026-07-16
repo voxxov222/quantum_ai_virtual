@@ -23,10 +23,10 @@
 
 <div align="center">
   <h3>🚀 Live Application</h3>
-  <a href="https://bet49-etvmigp2u-enterupteds-projects-e79e57e0.vercel.app/" target="_blank">
+  <a href="https://quantumai-flax.vercel.app/" target="_blank">
     <img src="https://img.shields.io/badge/Vercel-Launch_Live_App-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live App" />
   </a>
-  <p><strong><a href="https://bet49-etvmigp2u-enterupteds-projects-e79e57e0.vercel.app/" target="_blank">https://bet49-etvmigp2u-enterupteds-projects-e79e57e0.vercel.app/</a></strong></p>
+  <p><strong><a href="https://quantumai-flax.vercel.app/" target="_blank">https://quantumai-flax.vercel.app/</a></strong></p>
 </div>
 
 <br/>
@@ -93,6 +93,9 @@ cd quantum-ai-open-source
 # 2. Synchronize Quantum Dependencies
 npm install
 
-# 3. Boot the Hub
+# 3. Start up with coding agent
+npx plugins add vercel/vercel-plugin
+
+# 4. Boot the Hub
 npm run dev
 ```
