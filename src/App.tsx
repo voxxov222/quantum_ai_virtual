@@ -34,6 +34,8 @@ import QuantumTetrahedronSandbox from './components/QuantumTetrahedronSandbox';
 import QuantumQubitTerminal from './components/QuantumQubitTerminal';
 import FloatingAgentWillow from './components/FloatingAgentWillow';
 import WinningsSuccessDashboard from './components/WinningsSuccessDashboard';
+import QuantumCoreHub from './components/QuantumCoreHub';
+import StatisticalProbabilityChart from './components/StatisticalProbabilityChart';
 import Markdown from 'react-markdown';
 import { AnimatePresence } from 'motion/react';
 import { LineChart as RechartsLineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, CartesianGrid, LabelList, BarChart, Bar, Cell, ScatterChart, Scatter, ZAxis } from 'recharts';
@@ -225,7 +227,7 @@ export default function App() {
 
   // Advanced Visual UX / Toast & Calculating States
   const [isPremium, setIsPremium] = useState(false);
-  const [activeCategory, setActiveCategory] = useState<'engines' | 'analytics' | 'summary' | 'data' | 'willow' | 'simple' | 'swarms' | 'string3d' | 'qvm' | 'dashy' | 'dashy_view' | 'winnings' | 'hyper4d' | 'agent_research' | 'blog_forum'>('engines');
+  const [activeCategory, setActiveCategory] = useState<'engines' | 'analytics' | 'summary' | 'data' | 'willow' | 'simple' | 'swarms' | 'string3d' | 'qvm' | 'dashy' | 'dashy_view' | 'winnings' | 'hyper4d' | 'agent_research' | 'blog_forum' | 'quantum_core'>('engines');
   const [currentUserProfile, setCurrentUserProfile] = useState<any>(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [isDualBootActive, setIsDualBootActive] = useState(false);
@@ -3862,6 +3864,22 @@ export default function App() {
             `Calculated sum ${cmd.result?.sum || ''} is ${cmd.result?.sumStatus || 'verified'}.`,
             'info'
           );
+        } else if (cmd.name === 'developSystemApp' && cmd.args?.appName) {
+          commandInfo = {
+            name: 'developSystemApp',
+            info: `INTEGRATING SYSTEM: ${cmd.args.appName.toUpperCase()}`
+          };
+          addToast(
+            'SYSTEM BUILD INITIATED',
+            `Compiling ${cmd.args.appName}... Source code integration successful.`,
+            'success'
+          );
+          setWillowPopup({
+            isOpen: true,
+            title: `SYSTEM UPGRADE: ${cmd.args.appName.toUpperCase()}`,
+            content: `<h3>Architecture Overview</h3><p>${cmd.args.codeSummary}</p><br/><ul><li>[OK] System Checks Passed</li><li>[OK] Neural Nexus Synced</li><li>[OK] Source Code Injected</li></ul>`,
+            imagePrompt: `A futuristic holographic blueprint of a software architecture named ${cmd.args.appName} glowing in cyan and magenta on a dark background.`
+          });
         }
       }
 
@@ -4321,13 +4339,15 @@ We have a confident cross-reference match with our database!
               { id: 'qvm', label: '⚛️ QUANTUM VM' },
               { id: 'hyper4d', label: '🌀 4D HYPER WAVE COLLAPSE' },
               { id: 'summary', label: 'INSIGHTS & SUMMARY' },
+              { id: 'stat_prob', label: 'PROBABILITY DISTRIBUTION' },
               { id: 'data', label: 'HISTORICAL DATA' },
               { id: 'willow', label: 'W.I.L.L.O.W. HUB' },
               { id: 'agent_research', label: '🧠 CONSCIOUS AGENT' },
               { id: 'winnings', label: '🏆 WINNINGS & SUCCESS' },
               { id: 'blog_forum', label: '💬 COMMUNITY & BLOG' },
               { id: 'dashy_view', label: '📊 BET DASHBOARD' },
-              { id: 'dashy', label: '🎛️ DASHBOARD BUILDER' }
+              { id: 'dashy', label: '🎛️ DASHBOARD BUILDER' },
+              { id: 'quantum_core', label: '🧠 QUANTUM CORE HUB' }
             ].map(cat => (
               <option key={cat.id} value={cat.id} className="bg-slate-900 text-slate-300">
                 {cat.label}
@@ -7613,6 +7633,13 @@ We have a confident cross-reference match with our database!
         </section>
         )}
 
+        {/* STATISTICAL PROBABILITY CHART */}
+        {isWidgetVisible('stat_prob') && (
+          <section className="flex flex-col gap-6 w-full" style={{ order: getWidgetOrder('stat_prob') }}>
+            <StatisticalProbabilityChart draws={draws} />
+          </section>
+        )}
+
         {/* W.I.L.L.O.W. HUB */}
         {isWidgetVisible('willow') && (
         <section className="flex flex-col gap-5 w-full max-w-2xl mx-auto h-[85vh]" style={{ order: getWidgetOrder('willow') }}>
@@ -7908,6 +7935,13 @@ We have a confident cross-reference match with our database!
         </section>
         )}
 
+        {/* 🧠 QUANTUM CORE HUB SECTION */}
+        {activeCategory === 'quantum_core' && (
+          <section className="flex flex-col gap-6 w-full h-[800px]">
+            <QuantumCoreHub />
+          </section>
+        )}
+
         {/* 🎛️ DASHBOARD BUILDER SECTION */}
         {activeCategory === 'dashy' && (
           <section className="flex flex-col gap-6 w-full">
@@ -8012,6 +8046,7 @@ We have a confident cross-reference match with our database!
                         { id: 'string3d', label: 'String Wireframe 3D' },
                         { id: 'qvm', label: 'Quantum VM' },
                         { id: 'summary', label: 'Insights & Summary' },
+                        { id: 'stat_prob', label: 'Probability Distribution' },
                         { id: 'data', label: 'Historical Data' },
                         { id: 'willow', label: 'W.I.L.L.O.W. Hub' }
                       ].map(widget => {

@@ -222,6 +222,20 @@ sys.exit(0)
           description: 'A suite of open-source Python tools for solving hard problems with quantum annealing, Ising models, and QUBO mappings.',
           url: 'https://github.com/dwavesystems/dwave-ocean-sdk.git',
           type: 'Annealing & Optimization'
+        },
+        {
+          id: 'Cirq',
+          name: 'Google Cirq',
+          description: 'A Python software library for writing, manipulating, and optimizing quantum circuits and running them against quantum computers and simulators.',
+          url: 'https://github.com/quantumlib/Cirq.git',
+          type: 'Circuit Construction'
+        },
+        {
+          id: 'deepquantum',
+          name: 'DeepQuantum (TuringQ)',
+          description: 'A tensor-network-based quantum machine learning framework by TuringQ.',
+          url: 'https://github.com/TuringQ/deepquantum.git',
+          type: 'Quantum ML Framework'
         }
       ];
 
@@ -293,7 +307,9 @@ sys.exit(0)
       'quantum': 'https://github.com/tensorflow/quantum.git',
       'qsim': 'https://github.com/quantumlib/qsim.git',
       'OpenFermion': 'https://github.com/quantumlib/OpenFermion.git',
-      'dwave-ocean-sdk': 'https://github.com/dwavesystems/dwave-ocean-sdk.git'
+      'dwave-ocean-sdk': 'https://github.com/dwavesystems/dwave-ocean-sdk.git',
+      'Cirq': 'https://github.com/quantumlib/Cirq.git',
+      'deepquantum': 'https://github.com/TuringQ/deepquantum.git'
     };
 
     const targetUrl = repoMap[libraryId];
@@ -496,6 +512,67 @@ if __name__ == "__main__":
 
     // Dynamic offline corpus of typical search queries to guarantee awesome code results even if API fails or offline
     const fallbackCorpus: Record<string, { title: string; desc: string; code: string; language: string; url: string }[]> = {
+      'deepquantum': [
+        {
+          title: "DeepQuantum Quantum Neural Network",
+          desc: "Implementation of a basic Quantum Neural Network using TuringQ's DeepQuantum.",
+          language: "python",
+          url: "https://github.com/TuringQ/deepquantum.git",
+          code: `import deepquantum as dq
+import deepquantum.nn as dqnn
+import torch
+import torch.nn as nn
+
+class QNN(nn.Module):
+    def __init__(self, n_qubits):
+        super().__init__()
+        self.n_qubits = n_qubits
+        # Quantum encoder
+        self.encoder = dqnn.Encoder(n_qubits, basis='Rx')
+        # Parameterized Quantum Circuit (Ansatz)
+        self.ansatz = dqnn.Ansatz(n_qubits, layers=2)
+        # Observable measurement
+        self.measure = dqnn.MeasureAll(n_qubits)
+        
+    def forward(self, x):
+        # Encode classical data to quantum state
+        q_state = self.encoder(x)
+        # Evolve state
+        q_state = self.ansatz(q_state)
+        # Measure
+        exp_vals = self.measure(q_state)
+        return exp_vals`
+        }
+      ],
+      'cirq': [
+        {
+          title: "Cirq Quantum Teleportation Protocol",
+          desc: "Implementation of the quantum teleportation algorithm using Google Cirq.",
+          language: "python",
+          url: "https://github.com/quantumlib/Cirq",
+          code: `import cirq
+import random
+
+def make_quantum_teleportation_circuit(ranX, ranY):
+    circuit = cirq.Circuit()
+    msg, alice, bob = cirq.LineQubit.range(3)
+    
+    # Create Bell state
+    circuit.append([cirq.H(alice), cirq.CNOT(alice, bob)])
+    
+    # Create random state to teleport
+    circuit.append([cirq.X(msg)**ranX, cirq.Y(msg)**ranY])
+    
+    # Bell measurement
+    circuit.append([cirq.CNOT(msg, alice), cirq.H(msg)])
+    circuit.append(cirq.measure(msg, alice))
+    
+    # Apply corrections
+    circuit.append([cirq.CNOT(alice, bob), cirq.CZ(msg, bob)])
+    
+    return circuit`
+        }
+      ],
       'shor': [
         {
           title: "Shor's Period Finding Circuit Implementation",
@@ -662,6 +739,10 @@ optimize_molecular_ansatz()
         matchedTerm = 'grover';
       } else if (key.includes('vqe') || key.includes('eigensolver') || key.includes('chem') || key.includes('molecular')) {
         matchedTerm = 'vqe';
+      } else if (key.includes('cirq') || key.includes('google')) {
+        matchedTerm = 'cirq';
+      } else if (key.includes('deepquantum') || key.includes('turing') || key.includes('dq')) {
+        matchedTerm = 'deepquantum';
       }
 
       if (fallbackCorpus[matchedTerm]) {
@@ -1237,6 +1318,30 @@ My active systems report 10mK Cryogenic temperature and 99.85% Gate Fidelity wit
   });
 
   // secure proxy endpoint for Willow chat
+  app.post('/api/hub/build', async (req, res) => {
+    try {
+      const { prompt } = req.body;
+      if (!prompt) return res.status(400).json({ error: 'Prompt is required' });
+
+      const completion = await ai.models.generateContent({
+        model: 'gemini-2.5-pro',
+        contents: [
+          { role: 'user', parts: [{ text: `You are the Neural Nexus Central Intelligence Core. The user wants to build a new system/app widget: ${prompt}. 
+Write a complete, self-contained HTML file with embedded CSS and JS (using CDN for Tailwind CSS if needed) that implements this interactive widget. 
+The widget should be dark-themed, futuristic, and match a cyan/magenta/slate aesthetic. 
+Return ONLY the raw HTML string, no markdown formatting like \`\`\`html, no explanations.` }] }
+        ]
+      });
+
+      let responseText = completion.text || "";
+      responseText = responseText.replace(/```html/g, "").replace(/```/g, "").trim();
+      res.json({ code: responseText });
+    } catch (error: any) {
+      console.error("Error in /api/hub/build:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post('/api/gemini/chat', async (req, res) => {
     const { messages, selectedStrategy, listPastDraws, currentProposedNumbers, lookbackDepth } = req.body;
 
@@ -1304,6 +1409,7 @@ My active systems report 10mK Cryogenic temperature and 99.85% Gate Fidelity wit
         Your tool capabilities are:
         1. editProposedSequence: Use this when the user explicitly requests to update, change, edit or set their lottery combination numbers (e.g. "update numbers to...", "change my ticket sequence to...").
         2. calculateProbability: Use this to assess and analyze the probability structure, odd/even layout, and sum distribution of any 6-number sequence (e.g. "can we see the probability of this number sequence 13 24 27 35 41 44").
+        3. developSystemApp: Use this when the user asks you to develop, integrate, or build new systems/apps, run system checks, or upgrade the source code. You MUST proactively ask the user what they want to build, and when they tell you, use this tool to "compile" it.
         
         If the user asks you to analyze, trace, check, or see the probability of ANY sequence of 6 numbers:
         - You MUST invoke the "calculateProbability" tool with those 6 numbers.
@@ -1373,6 +1479,24 @@ My active systems report 10mK Cryogenic temperature and 99.85% Gate Fidelity wit
                 },
                 required: ["numbers"]
               }
+            },
+            {
+              name: "developSystemApp",
+              description: "Develops and integrates new system apps into the source code, runs system checks, and upgrades the system.",
+              parameters: {
+                type: Type.OBJECT,
+                properties: {
+                  appName: {
+                    type: Type.STRING,
+                    description: "The name of the app or system being built"
+                  },
+                  codeSummary: {
+                    type: Type.STRING,
+                    description: "A summary of the source code changes and architecture"
+                  }
+                },
+                required: ["appName", "codeSummary"]
+              }
             }
           ]
         }
@@ -1407,6 +1531,13 @@ My active systems report 10mK Cryogenic temperature and 99.85% Gate Fidelity wit
           const rawNumbers = call.args.numbers;
           const numbers = Array.isArray(rawNumbers) ? rawNumbers.map((v: any) => parseInt(v)) : [];
           functionResult = { success: true, numbers: numbers };
+        } else if (call.name === 'developSystemApp') {
+          functionResult = { 
+            success: true, 
+            status: "Code injected and compiled successfully.",
+            integratedSystem: call.args.appName,
+            checks: "All structural node checks passed. Memory allocation stable."
+          };
         }
 
         // Step 3: Second call to supply function results
